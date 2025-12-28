@@ -6,13 +6,9 @@ use Illuminate\Support\Facades\Auth;
 use Jenssegers\Agent\Agent;
 use Stevebauman\Location\Facades\Location;
 
-// https://github.com/jenssegers/agent
-// https://github.com/stevebauman/location
-
 trait LoggableTrait
 {
     //
-
     public function logActivity($logName, $message, $properties = [])
     {
         $ip = request()->ip();

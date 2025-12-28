@@ -1,18 +1,9 @@
 <?php
 
-/**
- * 🧠 AI GUIDELINE: Product Subcategory Controller
- * ============================================================
- * Manages product subcategories with photo upload support
- * - Uses HandlePhotoTrait for photo management
- * - Activity logging via LoggableTrait
- * - Standard CRUD + bulkDestroy operations
- */
-
-namespace App\Http\Controllers\Api\V1;
+namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\ProductSubcategory;
+use App\Models\ProductCategory;
 use App\Traits\HandlePhotoTrait;
 use App\Traits\LoggableTrait;
 use Illuminate\Http\Request;
@@ -21,24 +12,20 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Throwable;
 
-class ProductSubcategoryController extends Controller
+class ProductCategoryController extends Controller
 {
     use HandlePhotoTrait, LoggableTrait;
 
     public function index(Request $request)
     {
-        $query = ProductSubcategory::with(['category', 'createdBy', 'updatedBy']);
+        $query = ProductCategory::with(['createdBy', 'updatedBy']);
 
         if ($request->filled('search')) {
-            $query->where('name', 'like', '%'.$request->query('search').'%');
+            $query->where('name', 'like', '%' . $request->query('search') . '%');
         }
 
         if ($request->filled('status')) {
             $query->where('status', $request->query('status'));
-        }
-
-        if ($request->filled('product_category_id')) {
-            $query->where('product_category_id', $request->query('product_category_id'));
         }
 
         if ($request->boolean('paginate')) {
@@ -46,7 +33,7 @@ class ProductSubcategoryController extends Controller
             $data = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
             return response()->json([
-                'message' => 'Subcategories retrieved successfully',
+                'message' => 'Categories retrieved successfully',
                 'data' => $data,
                 'version' => 'v1',
             ]);
@@ -55,7 +42,7 @@ class ProductSubcategoryController extends Controller
         $data = $query->orderBy('created_at', 'desc')->get();
 
         return response()->json([
-            'message' => 'Subcategories retrieved successfully',
+            'message' => 'Categories retrieved successfully',
             'data' => $data,
             'version' => 'v1',
         ]);
@@ -65,10 +52,9 @@ class ProductSubcategoryController extends Controller
     {
         try {
             $validated = $request->validate([
-                'name' => 'required|string|max:255',
+                'name' => 'required|string|max:255|unique:product_categories,name',
                 'description' => 'nullable|string',
                 'status' => 'required|in:active,inactive',
-                'product_category_id' => 'required|exists:product_categories,id',
                 'photo' => 'nullable|array',
                 'photo.file_path' => 'nullable|file|image|mimes:jpeg,png,jpg,gif|max:2048',
             ]);
@@ -80,21 +66,21 @@ class ProductSubcategoryController extends Controller
 
             // Handle photo upload
             if ($request->hasFile('photo.file_path')) {
-                $validated['photo_url'] = $this->handlePhotoUpload($request->file('photo.file_path'), 'subcategories', false);
+                $validated['photo_url'] = $this->handlePhotoUpload($request->file('photo.file_path'), 'categories', false);
             }
 
-            $subcategory = ProductSubcategory::create($validated);
+            $category = ProductCategory::create($validated);
 
-            $this->logActivity('subcategory_created', "Subcategory '{$subcategory->name}' created.", [
-                'subcategory_id' => $subcategory->id,
+            $this->logActivity('category_created', "Category '{$category->name}' created.", [
+                'category_id' => $category->id,
             ]);
 
             DB::commit();
 
             return response()->json(
                 [
-                    'message' => 'Subcategory created successfully',
-                    'data' => $subcategory->load('category'),
+                    'message' => 'Category created successfully',
+                    'data' => $category,
                     'version' => 'v1',
                 ],
                 201
@@ -127,12 +113,12 @@ class ProductSubcategoryController extends Controller
 
     public function show($id)
     {
-        $subcategory = ProductSubcategory::with(['category', 'createdBy', 'updatedBy', 'products'])->find($id);
+        $category = ProductCategory::with(['createdBy', 'updatedBy', 'subcategories'])->find($id);
 
-        if (! $subcategory) {
+        if (! $category) {
             return response()->json(
                 [
-                    'message' => 'Subcategory not found',
+                    'message' => 'Category not found',
                     'error' => 'not_found',
                     'code' => 404,
                     'version' => 'v1',
@@ -142,8 +128,8 @@ class ProductSubcategoryController extends Controller
         }
 
         return response()->json([
-            'message' => 'Subcategory retrieved successfully',
-            'data' => $subcategory,
+            'message' => 'Category retrieved successfully',
+            'data' => $category,
             'version' => 'v1',
         ]);
     }
@@ -151,12 +137,12 @@ class ProductSubcategoryController extends Controller
     public function update(Request $request, $id)
     {
         try {
-            $subcategory = ProductSubcategory::find($id);
+            $category = ProductCategory::find($id);
 
-            if (! $subcategory) {
+            if (! $category) {
                 return response()->json(
                     [
-                        'message' => 'Subcategory not found',
+                        'message' => 'Category not found',
                         'error' => 'not_found',
                         'code' => 404,
                         'version' => 'v1',
@@ -166,10 +152,9 @@ class ProductSubcategoryController extends Controller
             }
 
             $validated = $request->validate([
-                'name' => 'sometimes|string|max:255',
+                'name' => 'sometimes|string|max:255|unique:product_categories,name,' . $category->id,
                 'description' => 'nullable|string',
                 'status' => 'sometimes|in:active,inactive',
-                'product_category_id' => 'sometimes|exists:product_categories,id',
                 'photo' => 'nullable|array',
                 'photo.file_path' => 'nullable|file|image|mimes:jpeg,png,jpg,gif|max:2048',
             ]);
@@ -180,20 +165,20 @@ class ProductSubcategoryController extends Controller
 
             // Handle photo update
             if ($request->hasFile('photo.file_path')) {
-                $validated['photo_url'] = $this->updatePhoto($request->file('photo.file_path'), $subcategory->photo_url, 'subcategories', false);
+                $validated['photo_url'] = $this->updatePhoto($request->file('photo.file_path'), $category->photo_url, 'categories', false);
             }
 
-            $subcategory->update($validated);
+            $category->update($validated);
 
-            $this->logActivity('subcategory_updated', "Subcategory '{$subcategory->name}' updated.", [
-                'subcategory_id' => $subcategory->id,
+            $this->logActivity('category_updated', "Category '{$category->name}' updated.", [
+                'category_id' => $category->id,
             ]);
 
             DB::commit();
 
             return response()->json([
-                'message' => 'Subcategory updated successfully',
-                'data' => $subcategory->load('category'),
+                'message' => 'Category updated successfully',
+                'data' => $category,
                 'version' => 'v1',
             ]);
         } catch (ValidationException $e) {
@@ -225,12 +210,12 @@ class ProductSubcategoryController extends Controller
     public function destroy($id)
     {
         try {
-            $subcategory = ProductSubcategory::find($id);
+            $category = ProductCategory::find($id);
 
-            if (! $subcategory) {
+            if (! $category) {
                 return response()->json(
                     [
-                        'message' => 'Subcategory not found',
+                        'message' => 'Category not found',
                         'error' => 'not_found',
                         'code' => 404,
                         'version' => 'v1',
@@ -242,21 +227,21 @@ class ProductSubcategoryController extends Controller
             DB::beginTransaction();
 
             // Delete photo if exists
-            if ($subcategory->photo_url) {
-                $this->deletePhoto($subcategory->photo_url);
+            if ($category->photo_url) {
+                $this->deletePhoto($category->photo_url);
             }
 
-            $subcategoryName = $subcategory->name;
-            $subcategory->delete();
+            $categoryName = $category->name;
+            $category->delete();
 
-            $this->logActivity('subcategory_deleted', "Subcategory '{$subcategoryName}' deleted.", [
-                'subcategory_id' => $id,
+            $this->logActivity('category_deleted', "Category '{$categoryName}' deleted.", [
+                'category_id' => $id,
             ]);
 
             DB::commit();
 
             return response()->json([
-                'message' => 'Subcategory deleted successfully',
+                'message' => 'Category deleted successfully',
                 'version' => 'v1',
             ]);
         } catch (Throwable $e) {
@@ -296,12 +281,12 @@ class ProductSubcategoryController extends Controller
         try {
             DB::beginTransaction();
 
-            $subcategories = ProductSubcategory::whereIn('id', $ids)->get();
+            $categories = ProductCategory::whereIn('id', $ids)->get();
 
-            if ($subcategories->isEmpty()) {
+            if ($categories->isEmpty()) {
                 return response()->json(
                     [
-                        'message' => 'No matching subcategories found',
+                        'message' => 'No matching categories found',
                         'error' => 'not_found',
                         'code' => 404,
                         'version' => 'v1',
@@ -311,16 +296,16 @@ class ProductSubcategoryController extends Controller
             }
 
             // Delete photos
-            foreach ($subcategories as $subcategory) {
-                if ($subcategory->photo_url) {
-                    $this->deletePhoto($subcategory->photo_url);
+            foreach ($categories as $category) {
+                if ($category->photo_url) {
+                    $this->deletePhoto($category->photo_url);
                 }
             }
 
-            $deletedNames = $subcategories->pluck('name')->toArray();
-            ProductSubcategory::whereIn('id', $ids)->delete();
+            $deletedNames = $categories->pluck('name')->toArray();
+            ProductCategory::whereIn('id', $ids)->delete();
 
-            $this->logActivity('subcategories_bulk_deleted', 'Deleted: '.implode(', ', $deletedNames), [
+            $this->logActivity('categories_bulk_deleted', 'Deleted: ' . implode(', ', $deletedNames), [
                 'ids' => $ids,
             ]);
 

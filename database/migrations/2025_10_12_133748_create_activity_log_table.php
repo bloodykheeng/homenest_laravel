@@ -17,6 +17,8 @@ class CreateActivityLogTable extends Migration
             $table->json('properties')->nullable();
             $table->timestamps();
             $table->index('log_name');
+
+            $table->index('created_at'); // ✅ custom ive put this myself, Index for created_at for faster queries
         });
     }
 

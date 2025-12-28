@@ -46,29 +46,29 @@ class Product extends Model
     public function category()
     {
         return $this->hasOneThrough(
-            ProductCategory::class,       // Final model
-            ProductSubcategory::class,    // Intermediate model
-            'id',                         // Foreign key on ProductSubcategory (its PK)
-            'id',                         // Foreign key on ProductCategory (its PK)
-            'product_subcategory_id',     // Local key on Product (FK → ProductSubcategory)
-            'product_category_id'         // Local key on ProductSubcategory (FK → ProductCategory)
+            ProductCategory::class,
+            ProductSubcategory::class,
+            'id',
+            'id',
+            'product_subcategory_id',
+            'product_category_id'
         );
     }
 
     /**
-     * Relationship: Product has many photos
+     * Relationship: Product has many attachments
      */
-    public function photos()
+    public function productAttachments()
     {
-        return $this->hasMany(ProductPhoto::class, 'product_id');
+        return $this->hasMany(ProductAttachment::class, 'product_id');
     }
 
     /**
-     * Relationship: Get featured photo for this product
+     * Relationship: Get featured attachment for this product
      */
-    public function featuredPhoto()
+    public function featuredAttachment()
     {
-        return $this->hasOne(ProductPhoto::class, 'product_id')->where('featured', true);
+        return $this->hasOne(ProductAttachment::class, 'product_id')->where('featured', true);
     }
 
     /**
