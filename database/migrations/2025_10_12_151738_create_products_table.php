@@ -20,14 +20,15 @@ return new class extends Migration
             $table->decimal('rating', 3, 2)->default(0.00);
             $table->decimal('discount', 5, 2)->default(0.00);
             $table->string('status')->default('active')->index();
+            $table->boolean('show_in_slider')->default(false)->nullable();
             $table->unsignedBigInteger('product_subcategory_id');
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
 
             // Foreign key constraints
-            $table->foreign('product_subcategory_id')->references('id')->on('product_subcategories')->onDelete('CASCADE');
-            $table->foreign('created_by')->references('id')->on('users')->onDelete('SET NULL');
-            $table->foreign('updated_by')->references('id')->on('users')->onDelete('SET NULL');
+            $table->foreign('product_subcategory_id')->references('id')->on('product_subcategories')->onDelete('cascade');
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('restrict');
+            $table->foreign('updated_by')->references('id')->on('users')->onDelete('restrict');
 
             $table->timestamps();
         });

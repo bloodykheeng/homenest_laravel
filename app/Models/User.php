@@ -32,6 +32,7 @@ class User extends Authenticatable
         'username',
         'phone',
         'gender',
+        'citizenship',
         'allow_notifications',
         'status',
         'lastlogin',

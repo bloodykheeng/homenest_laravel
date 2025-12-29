@@ -5,13 +5,15 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Product;
 use App\Models\ProductAttachment;
+use App\Models\ProductColor;
+use App\Models\ProductSize;
+use App\Models\ProductAdditionalInfo;
 use App\Traits\HandleAttachmentTrait;
 use App\Traits\LoggableTrait;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 
 class ProductController extends Controller
 {
@@ -24,6 +26,10 @@ class ProductController extends Controller
             'category',
             'productAttachments',
             'featuredAttachment',
+            'colors',
+            'sizes',
+            'additionalInfo',
+            'reviews',
             'createdBy',
             'updatedBy',
         ]);
@@ -80,6 +86,10 @@ class ProductController extends Controller
             'category',
             'productAttachments',
             'featuredAttachment',
+            'colors',
+            'sizes',
+            'additionalInfo',
+            'reviews.user',
             'createdBy',
             'updatedBy',
         ])->find($id);
@@ -94,6 +104,20 @@ class ProductController extends Controller
     public function store(Request $request)
     {
         try {
+
+            // Decode JSON fields
+            $colors = $request->has('colors') ? json_decode($request->input('colors'), true) : [];
+            $sizes = $request->has('sizes') ? json_decode($request->input('sizes'), true) : [];
+            $additional_info = $request->has('additional_info') ? json_decode($request->input('additional_info'), true) : [];
+
+            // Merge decoded data back into request
+            $request->merge([
+                'colors' => $colors,
+                'sizes' => $sizes,
+                'additional_info' => $additional_info,
+                'show_in_slider' => filter_var($request->input('show_in_slider'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE),
+            ]);
+
             $validatedData = $request->validate([
                 'name' => 'required|string|max:255',
                 'description' => 'nullable|string',
@@ -103,6 +127,7 @@ class ProductController extends Controller
                 'discount' => 'nullable|numeric|min:0|max:100',
                 'status' => 'required|in:active,inactive,out_of_stock',
                 'product_subcategory_id' => 'required|exists:product_subcategories,id',
+                'show_in_slider' => 'boolean',
 
                 // Attachments
                 'attachments' => 'nullable|array',
@@ -110,6 +135,20 @@ class ProductController extends Controller
                 'attachments.*.caption' => 'nullable|string',
                 'attachments.*.featured' => 'nullable|boolean',
                 'attachments.*.file_path' => 'nullable|file|mimes:jpeg,png,jpg,gif,webp,mp4,mov,mkv,avi,pdf',
+
+                // Colors
+                'colors' => 'nullable|array',
+                'colors.*.color_name' => 'required|string',
+                'colors.*.color_code' => 'nullable|string',
+
+                // Sizes
+                'sizes' => 'nullable|array',
+                'sizes.*.size_name' => 'required|string',
+
+                // Additional Info
+                'additional_info' => 'nullable|array',
+                'additional_info.*.key' => 'required|string',
+                'additional_info.*.value' => 'required|string',
             ]);
 
             DB::beginTransaction();
@@ -149,9 +188,41 @@ class ProductController extends Controller
                 }
             }
 
+            // Handle colors
+            if (isset($validatedData['colors'])) {
+                foreach ($validatedData['colors'] as $colorData) {
+                    ProductColor::create([
+                        'product_id' => $product->id,
+                        'color_name' => $colorData['color_name'],
+                        'color_code' => $colorData['color_code'] ?? null,
+                    ]);
+                }
+            }
+
+            // Handle sizes
+            if (isset($validatedData['sizes'])) {
+                foreach ($validatedData['sizes'] as $sizeData) {
+                    ProductSize::create([
+                        'product_id' => $product->id,
+                        'size_name' => $sizeData['size_name'],
+                    ]);
+                }
+            }
+
+            // Handle additional info
+            if (isset($validatedData['additional_info'])) {
+                foreach ($validatedData['additional_info'] as $infoData) {
+                    ProductAdditionalInfo::create([
+                        'product_id' => $product->id,
+                        'key' => $infoData['key'],
+                        'value' => $infoData['value'],
+                    ]);
+                }
+            }
+
             DB::commit();
 
-            $this->logActivity('Product Created', [
+            $this->logActivity('Product Created', 'A new product was successfully created', [
                 'product_id' => $product->id,
                 'name' => $product->name,
                 'created_by' => $user->name,
@@ -159,12 +230,12 @@ class ProductController extends Controller
 
             return response()->json([
                 'message' => 'Product created successfully',
-                'data' => $product->load(['subcategory', 'productAttachments', 'featuredAttachment'])
+                'data' => $product->load(['subcategory', 'productAttachments', 'featuredAttachment', 'colors', 'sizes', 'additionalInfo'])
             ], 201);
         } catch (Exception $e) {
             DB::rollBack();
 
-            Log::error('Product Creation Failed', [
+            $this->logActivity('Product Creation Failed', 'Failed to create product: ' . $e->getMessage(), [
                 'error' => $e->getMessage(),
                 'line' => $e->getLine(),
                 'user_id' => Auth::id(),
@@ -181,7 +252,20 @@ class ProductController extends Controller
     public function update(Request $request, $id)
     {
         try {
-            $product = Product::with(['productAttachments'])->findOrFail($id);
+            $product = Product::with(['productAttachments', 'colors', 'sizes', 'additionalInfo'])->findOrFail($id);
+
+            // Decode JSON fields
+            $colors = $request->has('colors') ? json_decode($request->input('colors'), true) : [];
+            $sizes = $request->has('sizes') ? json_decode($request->input('sizes'), true) : [];
+            $additional_info = $request->has('additional_info') ? json_decode($request->input('additional_info'), true) : [];
+
+            // Merge decoded data back into request
+            $request->merge([
+                'colors' => $colors,
+                'sizes' => $sizes,
+                'additional_info' => $additional_info,
+                'show_in_slider' => filter_var($request->input('show_in_slider'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE),
+            ]);
 
             $validatedData = $request->validate([
                 'name' => 'sometimes|string|max:255',
@@ -192,6 +276,7 @@ class ProductController extends Controller
                 'discount' => 'nullable|numeric|min:0|max:100',
                 'status' => 'sometimes|in:active,inactive,out_of_stock',
                 'product_subcategory_id' => 'sometimes|exists:product_subcategories,id',
+                'show_in_slider' => 'boolean',
 
                 // Attachments
                 'attachments' => 'nullable|array',
@@ -201,6 +286,23 @@ class ProductController extends Controller
                 'attachments.*.caption' => 'nullable|string',
                 'attachments.*.featured' => 'nullable|boolean',
                 'attachments.*.file_path' => 'nullable|file|mimes:jpeg,png,jpg,gif,webp,mp4,mov,mkv,avi,pdf',
+
+                // Colors
+                'colors' => 'nullable|array',
+                'colors.*.id' => 'nullable|exists:product_colors,id',
+                'colors.*.color_name' => 'required|string',
+                'colors.*.color_code' => 'nullable|string',
+
+                // Sizes
+                'sizes' => 'nullable|array',
+                'sizes.*.id' => 'nullable|exists:product_sizes,id',
+                'sizes.*.size_name' => 'required|string',
+
+                // Additional Info
+                'additional_info' => 'nullable|array',
+                'additional_info.*.id' => 'nullable|exists:product_additional_infos,id',
+                'additional_info.*.key' => 'required|string',
+                'additional_info.*.value' => 'required|string',
             ]);
 
             DB::beginTransaction();
@@ -277,9 +379,70 @@ class ProductController extends Controller
                 }
             }
 
+            // Handle colors
+            if (isset($validatedData['colors'])) {
+                $colorIds = collect($validatedData['colors'])->whereNotNull('id')->pluck('id')->toArray();
+                $product->colors()->whereNotIn('id', $colorIds)->delete();
+
+                foreach ($validatedData['colors'] as $colorData) {
+                    if (isset($colorData['id'])) {
+                        ProductColor::where('id', $colorData['id'])->update([
+                            'color_name' => $colorData['color_name'],
+                            'color_code' => $colorData['color_code'] ?? null,
+                        ]);
+                    } else {
+                        ProductColor::create([
+                            'product_id' => $product->id,
+                            'color_name' => $colorData['color_name'],
+                            'color_code' => $colorData['color_code'] ?? null,
+                        ]);
+                    }
+                }
+            }
+
+            // Handle sizes
+            if (isset($validatedData['sizes'])) {
+                $sizeIds = collect($validatedData['sizes'])->whereNotNull('id')->pluck('id')->toArray();
+                $product->sizes()->whereNotIn('id', $sizeIds)->delete();
+
+                foreach ($validatedData['sizes'] as $sizeData) {
+                    if (isset($sizeData['id'])) {
+                        ProductSize::where('id', $sizeData['id'])->update([
+                            'size_name' => $sizeData['size_name'],
+                        ]);
+                    } else {
+                        ProductSize::create([
+                            'product_id' => $product->id,
+                            'size_name' => $sizeData['size_name'],
+                        ]);
+                    }
+                }
+            }
+
+            // Handle additional info
+            if (isset($validatedData['additional_info'])) {
+                $infoIds = collect($validatedData['additional_info'])->whereNotNull('id')->pluck('id')->toArray();
+                $product->additionalInfo()->whereNotIn('id', $infoIds)->delete();
+
+                foreach ($validatedData['additional_info'] as $infoData) {
+                    if (isset($infoData['id'])) {
+                        ProductAdditionalInfo::where('id', $infoData['id'])->update([
+                            'key' => $infoData['key'],
+                            'value' => $infoData['value'],
+                        ]);
+                    } else {
+                        ProductAdditionalInfo::create([
+                            'product_id' => $product->id,
+                            'key' => $infoData['key'],
+                            'value' => $infoData['value'],
+                        ]);
+                    }
+                }
+            }
+
             DB::commit();
 
-            $this->logActivity('Product Updated', [
+            $this->logActivity('Product Updated', 'Product was successfully updated', [
                 'product_id' => $product->id,
                 'name' => $product->name,
                 'updated_by' => $user->name,
@@ -287,12 +450,12 @@ class ProductController extends Controller
 
             return response()->json([
                 'message' => 'Product updated successfully',
-                'data' => $product->load(['subcategory', 'productAttachments', 'featuredAttachment'])
+                'data' => $product->load(['subcategory', 'productAttachments', 'featuredAttachment', 'colors', 'sizes', 'additionalInfo'])
             ]);
         } catch (Exception $e) {
             DB::rollBack();
 
-            Log::error('Product Update Failed', [
+            $this->logActivity('Product Update Failed', 'Failed to update product: ' . $e->getMessage(), [
                 'error' => $e->getMessage(),
                 'line' => $e->getLine(),
                 'product_id' => $id,
@@ -319,7 +482,7 @@ class ProductController extends Controller
 
             $product->delete();
 
-            $this->logActivity('Product Deleted', [
+            $this->logActivity('Product Deleted', 'Product was successfully deleted', [
                 'product_id' => $product->id,
                 'name' => $product->name,
                 'deleted_by' => Auth::user()->name ?? 'System',
@@ -383,7 +546,7 @@ class ProductController extends Controller
                 ->map(fn($product) => "Product ID: {$product['id']}, Name: \"{$product['name']}\"")
                 ->join('; ');
 
-            $this->logActivity('Products Bulk Deleted', [
+            $this->logActivity('Products Bulk Deleted', 'Multiple products were successfully deleted', [
                 'deleted_by' => Auth::user()->name ?? 'System',
                 'details' => $detailsString,
                 'count' => count($deletedProductDetails),
@@ -395,7 +558,7 @@ class ProductController extends Controller
         } catch (Exception $e) {
             DB::rollBack();
 
-            Log::error('Products Bulk Delete Failed', [
+            $this->logActivity('Products Bulk Delete Failed', 'Failed to delete multiple products: ' . $e->getMessage(), [
                 'product_ids' => $productIds,
                 'error' => $e->getMessage(),
                 'line' => $e->getLine(),

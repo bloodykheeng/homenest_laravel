@@ -40,9 +40,9 @@ class UserController extends Controller
             });
         }
 
-        // Filter by country
-        if ($request->filled('country')) {
-            $query->where('country', $request->query('country'));
+        // Filter by citizenship
+        if ($request->filled('citizenship')) {
+            $query->where('citizenship', $request->query('citizenship'));
         }
 
         // Search
@@ -92,7 +92,7 @@ class UserController extends Controller
                 'password' => 'required|string|min:8',
                 'allow_notifications' => 'nullable|boolean',
                 'status' => 'required|in:active,inactive',
-                'country' => 'nullable|string|max:100',
+                'citizenship' => 'nullable|string|max:100',
                 'city' => 'nullable|string|max:100',
                 'address' => 'nullable|string|max:500',
                 'postal_code' => 'nullable|string|max:20',
@@ -198,7 +198,7 @@ class UserController extends Controller
                 'password' => 'sometimes|nullable|string|min:8',
                 'allow_notifications' => 'sometimes|nullable|boolean',
                 'status' => 'sometimes|nullable|in:active,inactive',
-                'country' => 'sometimes|nullable|string|max:100',
+                'citizenship' => 'sometimes|nullable|string|max:100',
                 'city' => 'sometimes|nullable|string|max:100',
                 'address' => 'sometimes|nullable|string|max:500',
                 'postal_code' => 'sometimes|nullable|string|max:20',
@@ -305,7 +305,7 @@ class UserController extends Controller
             'phone' => 'sometimes|nullable|string|max:20|unique:users,phone,' . $user->id,
             'gender' => 'nullable|in:Male,Female,Prefer not to say',
             'allow_notifications' => 'nullable|boolean',
-            'country' => 'nullable|string|max:100',
+            'citizenship' => 'nullable|string|max:100',
             'city' => 'nullable|string|max:100',
             'address' => 'nullable|string|max:500',
             'postal_code' => 'nullable|string|max:20',
@@ -336,7 +336,7 @@ class UserController extends Controller
                 'phone' => $validatedData['phone'] ?? null,
                 'gender' => $validatedData['gender'] ?? null,
                 'allow_notifications' => $validatedData['allow_notifications'] ?? null,
-                'country' => $validatedData['country'] ?? null,
+                'citizenship' => $validatedData['citizenship'] ?? null,
                 'city' => $validatedData['city'] ?? null,
                 'address' => $validatedData['address'] ?? null,
                 'postal_code' => $validatedData['postal_code'] ?? null,
@@ -404,7 +404,7 @@ class UserController extends Controller
                 'allow_notifications' => $user->allow_notifications,
                 'status' => $user->status,
                 'photo_url' => $user->photo_url,
-                'country' => $user->country,
+                'citizenship' => $user->citizenship,
                 'city' => $user->city,
                 'address' => $user->address,
                 'postal_code' => $user->postal_code,

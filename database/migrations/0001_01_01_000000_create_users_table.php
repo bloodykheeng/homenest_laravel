@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('username')->unique()->nullable();
             $table->string('phone')->unique()->nullable();
             $table->string('gender')->nullable();
+            $table->string('citizenship')->nullable()->index();
             $table->boolean('allow_notifications')->default(true);
             $table->string('status')->nullable()->default("inactive")->index();
             $table->timestamp('lastlogin')->nullable();

@@ -22,8 +22,8 @@ return new class extends Migration
             $table->timestamps();
 
             // Foreign key constraints
-            $table->foreign('created_by')->references('id')->on('users')->onDelete('SET NULL');
-            $table->foreign('updated_by')->references('id')->on('users')->onDelete('SET NULL');
+            $table->foreign('created_by')->references('id')->on('users')->onDelete('restrict');
+            $table->foreign('updated_by')->references('id')->on('users')->onDelete('restrict');
         });
     }
 

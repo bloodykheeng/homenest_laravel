@@ -58,7 +58,7 @@ class AuthController extends Controller
             'allow_notifications' => $user->allow_notifications,
             'photo_url' => $user->photo_url,
             'phone' => $user->phone,
-            'country' => $user->country,
+            'citizenship' => $user->citizenship,
             'city' => $user->city,
             'address' => $user->address,
             'postal_code' => $user->postal_code,
@@ -114,8 +114,8 @@ class AuthController extends Controller
         $topics[] = $genderPrefix . '_all_users';
 
         // Location-based topics (Local/International)
-        if (!empty($user->country)) {
-            if ($user->country === 'Uganda') {
+        if (!empty($user->citizenship)) {
+            if ($user->citizenship === 'Uganda') {
                 $topics[] = $genderPrefix . '_local_users';
             } else {
                 $topics[] = $genderPrefix . '_international_users';
@@ -127,9 +127,9 @@ class AuthController extends Controller
             $topics[] = "role_" . strtolower(str_replace(' ', '_', $user->role));
         }
 
-        // Country-specific topic
-        if (!empty($user->country)) {
-            $topics[] = "country_" . strtolower(str_replace(' ', '_', $user->country));
+        // citizenship-specific topic
+        if (!empty($user->citizenship)) {
+            $topics[] = "citizenship_" . strtolower(str_replace(' ', '_', $user->citizenship));
         }
 
         // City-specific topic
@@ -211,7 +211,7 @@ class AuthController extends Controller
             'gender' => $user->gender,
             'status' => $user->status,
             'photo_url' => $user->photo_url,
-            'country' => $user->country,
+            'citizenship' => $user->citizenship,
             'city' => $user->city,
             'address' => $user->address,
             'postal_code' => $user->postal_code,

@@ -153,9 +153,8 @@ class NotificationController extends Controller
                             $genderQ->where('gender', $user->gender)->orWhere('gender', 'Both');
                         })
                         ->whereHas('users', function ($q) use ($user) {
-                            // Assuming you have a country field or location indicator
                             $q->where('users.id', $user->id)
-                                ->where('users.country', 'Uganda'); // or however you identify local users
+                                ->where('users.citizenship', 'Local');
                         });
                 });
 
@@ -167,7 +166,7 @@ class NotificationController extends Controller
                         })
                         ->whereHas('users', function ($q) use ($user) {
                             $q->where('users.id', $user->id)
-                                ->where('users.country', '!=', 'Uganda'); // or however you identify international users
+                                ->where('users.citizenship', '!=', 'Local');
                         });
                 });
 
@@ -545,7 +544,7 @@ class NotificationController extends Controller
         );
 
         // Also send to local users via email/SMS
-        $userIds = User::where('country', 'Uganda')
+        $userIds = User::where('citizenship', 'Local')
             ->when($notification->gender !== 'Both', function ($q) use ($notification) {
                 $q->where('gender', $notification->gender);
             })
@@ -583,7 +582,7 @@ class NotificationController extends Controller
         );
 
         // Also send to international users via email/SMS
-        $userIds = User::where('country', '!=', 'Uganda')
+        $userIds = User::where('citizenship', '!=', 'Local')
             ->when($notification->gender !== 'Both', function ($q) use ($notification) {
                 $q->where('gender', $notification->gender);
             })

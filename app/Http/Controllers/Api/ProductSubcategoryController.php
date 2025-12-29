@@ -40,7 +40,6 @@ class ProductSubcategoryController extends Controller
             return response()->json([
                 'message' => 'Subcategories retrieved successfully',
                 'data' => $data,
-                'version' => 'v1',
             ]);
         }
 
@@ -48,8 +47,7 @@ class ProductSubcategoryController extends Controller
 
         return response()->json([
             'message' => 'Subcategories retrieved successfully',
-            'data' => $data,
-            'version' => 'v1',
+            'data' => $data
         ]);
     }
 
@@ -62,7 +60,7 @@ class ProductSubcategoryController extends Controller
                 'status' => 'required|in:active,inactive',
                 'product_category_id' => 'required|exists:product_categories,id',
                 'photo' => 'nullable|array',
-                'photo.file_path' => 'nullable|file|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'photo.file_path' => 'nullable|file|image|mimes:jpeg,png,jpg,gif|max:5120',
             ]);
 
             DB::beginTransaction();
@@ -87,17 +85,15 @@ class ProductSubcategoryController extends Controller
                 [
                     'message' => 'Subcategory created successfully',
                     'data' => $subcategory->load('category'),
-                    'version' => 'v1',
                 ],
                 201
             );
         } catch (ValidationException $e) {
             return response()->json(
                 [
-                    'message' => 'Validation failed',
+                    'message' => 'Validation failed: ' . $e->getMessage(),
                     'errors' => $e->errors(),
                     'code' => 422,
-                    'version' => 'v1',
                 ],
                 422
             );
@@ -110,7 +106,7 @@ class ProductSubcategoryController extends Controller
                     'message' => 'Something went wrong',
                     'error' => $e->getMessage(),
                     'code' => 500,
-                    'version' => 'v1',
+
                 ],
                 500
             );
@@ -127,7 +123,7 @@ class ProductSubcategoryController extends Controller
                     'message' => 'Subcategory not found',
                     'error' => 'not_found',
                     'code' => 404,
-                    'version' => 'v1',
+
                 ],
                 404
             );
@@ -135,8 +131,7 @@ class ProductSubcategoryController extends Controller
 
         return response()->json([
             'message' => 'Subcategory retrieved successfully',
-            'data' => $subcategory,
-            'version' => 'v1',
+            'data' => $subcategory
         ]);
     }
 
@@ -151,7 +146,7 @@ class ProductSubcategoryController extends Controller
                         'message' => 'Subcategory not found',
                         'error' => 'not_found',
                         'code' => 404,
-                        'version' => 'v1',
+
                     ],
                     404
                 );
@@ -163,7 +158,7 @@ class ProductSubcategoryController extends Controller
                 'status' => 'sometimes|in:active,inactive',
                 'product_category_id' => 'sometimes|exists:product_categories,id',
                 'photo' => 'nullable|array',
-                'photo.file_path' => 'nullable|file|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'photo.file_path' => 'nullable|file|image|mimes:jpeg,png,jpg,gif|max:5120',
             ]);
 
             DB::beginTransaction();
@@ -186,15 +181,13 @@ class ProductSubcategoryController extends Controller
             return response()->json([
                 'message' => 'Subcategory updated successfully',
                 'data' => $subcategory->load('category'),
-                'version' => 'v1',
             ]);
         } catch (ValidationException $e) {
             return response()->json(
                 [
-                    'message' => 'Validation failed',
+                    'message' => 'Validation failed: ' . $e->getMessage(),
                     'errors' => $e->errors(),
                     'code' => 422,
-                    'version' => 'v1',
                 ],
                 422
             );
@@ -207,7 +200,7 @@ class ProductSubcategoryController extends Controller
                     'message' => 'Something went wrong',
                     'error' => $e->getMessage(),
                     'code' => 500,
-                    'version' => 'v1',
+
                 ],
                 500
             );
@@ -225,7 +218,7 @@ class ProductSubcategoryController extends Controller
                         'message' => 'Subcategory not found',
                         'error' => 'not_found',
                         'code' => 404,
-                        'version' => 'v1',
+
                     ],
                     404
                 );
@@ -249,7 +242,6 @@ class ProductSubcategoryController extends Controller
 
             return response()->json([
                 'message' => 'Subcategory deleted successfully',
-                'version' => 'v1',
             ]);
         } catch (Throwable $e) {
             DB::rollBack();
@@ -260,7 +252,7 @@ class ProductSubcategoryController extends Controller
                     'message' => 'Something went wrong',
                     'error' => $e->getMessage(),
                     'code' => 500,
-                    'version' => 'v1',
+
                 ],
                 500
             );
@@ -277,7 +269,7 @@ class ProductSubcategoryController extends Controller
                     'message' => 'Invalid or empty data',
                     'error' => 'bad_request',
                     'code' => 400,
-                    'version' => 'v1',
+
                 ],
                 400
             );
@@ -296,7 +288,7 @@ class ProductSubcategoryController extends Controller
                         'message' => 'No matching subcategories found',
                         'error' => 'not_found',
                         'code' => 404,
-                        'version' => 'v1',
+
                     ],
                     404
                 );
@@ -320,7 +312,6 @@ class ProductSubcategoryController extends Controller
 
             return response()->json([
                 'message' => 'Bulk delete successful',
-                'version' => 'v1',
             ]);
         } catch (Throwable $e) {
             DB::rollBack();
@@ -331,7 +322,7 @@ class ProductSubcategoryController extends Controller
                     'message' => 'Something went wrong',
                     'error' => $e->getMessage(),
                     'code' => 500,
-                    'version' => 'v1',
+
                 ],
                 500
             );

@@ -11,19 +11,18 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('product_subcategories', function (Blueprint $table) {
+        Schema::create('product_reviews', function (Blueprint $table) {
             $table->id();
-            $table->string('name')->index();
-            $table->text('description')->nullable();
-            $table->string('status')->default('active')->index();
-            $table->string('photo_url')->nullable();
-            $table->unsignedBigInteger('product_category_id');
+            $table->unsignedBigInteger('product_id');
+            $table->unsignedBigInteger('user_id');
+            $table->decimal('rating', 3, 2);
+            $table->text('comment')->nullable();
+            $table->timestamps();
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
-            $table->timestamps();
 
-            // Foreign key constraints
-            $table->foreign('product_category_id')->references('id')->on('product_categories')->onDelete('CASCADE');
+            $table->foreign('product_id')->references('id')->on('products')->onDelete('cascade');
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
             $table->foreign('created_by')->references('id')->on('users')->onDelete('restrict');
             $table->foreign('updated_by')->references('id')->on('users')->onDelete('restrict');
         });
@@ -34,6 +33,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('product_subcategories');
+        Schema::dropIfExists('product_reviews');
     }
 };

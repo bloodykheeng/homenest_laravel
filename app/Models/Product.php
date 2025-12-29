@@ -16,6 +16,7 @@ class Product extends Model
         'quantity',
         'rating',
         'discount',
+        'show_in_slider',
         'status',
         'product_subcategory_id',
         'created_by',
@@ -29,6 +30,7 @@ class Product extends Model
             'rating' => 'decimal:2',
             'discount' => 'decimal:2',
             'quantity' => 'integer',
+            'show_in_slider' => 'boolean',
         ];
     }
 
@@ -69,6 +71,26 @@ class Product extends Model
     public function featuredAttachment()
     {
         return $this->hasOne(ProductAttachment::class, 'product_id')->where('featured', true);
+    }
+
+    public function colors()
+    {
+        return $this->hasMany(ProductColor::class);
+    }
+
+    public function sizes()
+    {
+        return $this->hasMany(ProductSize::class);
+    }
+
+    public function additionalInfo()
+    {
+        return $this->hasMany(ProductAdditionalInfo::class);
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(ProductReview::class);
     }
 
     /**

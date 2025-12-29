@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\NotificationViewedByController;
 use App\Http\Controllers\Api\ProductCategoryController;
 use App\Http\Controllers\Api\ProductController;
+use App\Http\Controllers\Api\ProductReviewController;
 use App\Http\Controllers\Api\ProductSubcategoryController;
 use App\Http\Controllers\Api\RolesAndPermissionsController;
 use App\Http\Controllers\Api\UserController;
@@ -16,6 +17,7 @@ use App\Http\Controllers\LoginController;
 use App\Http\Controllers\OtpPasswordResetController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
 
 
 
@@ -71,6 +73,10 @@ Route::group(
         // ===============================  Products Routes  ===============================
         Route::resource('products', ProductController::class);
         Route::post('bulk-destroy-products', [ProductController::class, 'bulkDestroy']);
+
+        // ===============================  Products Reviews  ===============================
+        Route::resource('product-reviews', ProductReviewController::class);
+        Route::post('bulk-destroy-product-reviews', [ProductReviewController::class, 'bulkDestroy']);
 
 
         // ====================== Get AuthUser Notifications ======================
