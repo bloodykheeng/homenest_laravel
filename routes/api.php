@@ -39,6 +39,10 @@ Route::group(
 
         Route::Resource('faqs', FaqController::class)->only(['index']);
 
+        Route::resource('product-categories', ProductCategoryController::class)->only(['index']);
+        Route::resource('product-subcategories', ProductSubcategoryController::class)->only(['index']);
+        Route::resource('products', ProductController::class)->only(['index']);
+
 
         //========== email testing =============================
         Route::post('test-email', [EmailTestController::class, 'testEmail']);
@@ -63,15 +67,15 @@ Route::group(
         Route::post('bulk-destroy-faqs', [FaqController::class, 'bulkDestroy']);
 
         // ===============================  Product Categories Routes  ===============================
-        Route::resource('product-categories', ProductCategoryController::class);
+        Route::resource('product-categories', ProductCategoryController::class)->except(['index']);
         Route::post('bulk-destroy-product-categories', [ProductCategoryController::class, 'bulkDestroy']);
 
         // ===============================  Product Subcategories Routes  ===============================
-        Route::resource('product-subcategories', ProductSubcategoryController::class);
+        Route::resource('product-subcategories', ProductSubcategoryController::class)->except(['index']);
         Route::post('bulk-destroy-product-subcategories', [ProductSubcategoryController::class, 'bulkDestroy']);
 
         // ===============================  Products Routes  ===============================
-        Route::resource('products', ProductController::class);
+        Route::resource('products', ProductController::class)->except(['index']);
         Route::post('bulk-destroy-products', [ProductController::class, 'bulkDestroy']);
 
         // ===============================  Products Reviews  ===============================

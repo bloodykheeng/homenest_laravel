@@ -15,12 +15,13 @@ return new class extends Migration
             $table->id();
             $table->string('name')->index();
             $table->text('description')->nullable();
-            $table->decimal('price', 10, 2);
+            $table->decimal('price', 15, 2);
             $table->integer('quantity')->default(0);
             $table->decimal('rating', 3, 2)->default(0.00);
             $table->decimal('discount', 5, 2)->default(0.00);
             $table->string('status')->default('active')->index();
             $table->boolean('show_in_slider')->default(false)->nullable();
+            $table->boolean('featured')->default(false);
             $table->unsignedBigInteger('product_subcategory_id');
             $table->unsignedBigInteger('created_by')->nullable();
             $table->unsignedBigInteger('updated_by')->nullable();
