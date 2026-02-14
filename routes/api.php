@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductReviewController;
 use App\Http\Controllers\Api\ProductSubcategoryController;
 use App\Http\Controllers\Api\RolesAndPermissionsController;
+use App\Http\Controllers\Api\ShoppingCartController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EmailTestController;
@@ -17,6 +18,7 @@ use App\Http\Controllers\LoginController;
 use App\Http\Controllers\OtpPasswordResetController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+
 
 
 
@@ -32,6 +34,12 @@ Route::get('/user', function (Request $request) {
 Route::group(
     ['middleware' => ['optional_auth']],
     function () {
+
+        //======================= Shopping Carts ========================
+        Route::apiResource('shopping-carts', ShoppingCartController::class);
+        Route::post('sync-shopping-carts', [ShoppingCartController::class, 'syncCart']);
+        Route::delete('clear-shopping-carts', [ShoppingCartController::class, 'clearCart']);
+        Route::get('shopping-carts-count', [ShoppingCartController::class, 'cartCount']);
 
         // Login Routes
         Route::post('/login', [LoginController::class, 'login']); // Admin dashboard
