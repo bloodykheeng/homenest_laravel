@@ -5,13 +5,16 @@ use App\Http\Controllers\Api\FaqController;
 use App\Http\Controllers\Api\JobController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\NotificationViewedByController;
+use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\ProductCategoryController;
 use App\Http\Controllers\Api\ProductController;
 use App\Http\Controllers\Api\ProductReviewController;
 use App\Http\Controllers\Api\ProductSubcategoryController;
 use App\Http\Controllers\Api\RolesAndPermissionsController;
 use App\Http\Controllers\Api\ShoppingCartController;
+use App\Http\Controllers\Api\TransactionController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\WebhookController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EmailTestController;
 use App\Http\Controllers\LoginController;
@@ -19,14 +22,12 @@ use App\Http\Controllers\OtpPasswordResetController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-
-
-
-
-
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
+
+// =============================== OlyCash Webhooks (public, no auth) ==========================
+Route::post('webhooks/olycash', [WebhookController::class, 'handleOlyCash']);
 
 // Route::Resource('faqs', FaqController::class)->only(['index'])->middleware('optional_auth');
 
@@ -35,7 +36,7 @@ Route::group(
     ['middleware' => ['optional_auth']],
     function () {
 
-        //======================= Shopping Carts ========================
+        // ======================= Shopping Carts ========================
         Route::apiResource('shopping-carts', ShoppingCartController::class);
         Route::post('sync-shopping-carts', [ShoppingCartController::class, 'syncCart']);
         Route::delete('clear-shopping-carts', [ShoppingCartController::class, 'clearCart']);
@@ -51,26 +52,23 @@ Route::group(
         Route::resource('product-subcategories', ProductSubcategoryController::class)->only(['index']);
         Route::resource('products', ProductController::class)->only(['index']);
 
-
-        //========== email testing =============================
+        // ========== email testing =============================
         Route::post('test-email', [EmailTestController::class, 'testEmail']);
         Route::post('testFirebasePushNotification', [EmailTestController::class, 'testSendingFirebasePushNotification']);
 
-        //======================= password reset with otp ===============================
+        // ======================= password reset with otp ===============================
         Route::post('password-get-otp', [OtpPasswordResetController::class, 'getOtpForPasswordReset']);
         Route::post('password-validate-otp', [OtpPasswordResetController::class, 'validateOtp']);
         Route::post('password-reset-with-otp', [OtpPasswordResetController::class, 'resetPasswordWithOtp']);
     }
 );
 
-
 // ========================= private routes ===========================
 Route::group(
     ['middleware' => ['auth:sanctum']],
     function () {
 
-
-        //======================= faqs =============================
+        // ======================= faqs =============================
         Route::Resource('faqs', FaqController::class)->except(['index']);
         Route::post('bulk-destroy-faqs', [FaqController::class, 'bulkDestroy']);
 
@@ -90,7 +88,6 @@ Route::group(
         Route::resource('product-reviews', ProductReviewController::class);
         Route::post('bulk-destroy-product-reviews', [ProductReviewController::class, 'bulkDestroy']);
 
-
         // ====================== Get AuthUser Notifications ======================
         Route::get('getAuthUserNotifications', [NotificationController::class, 'getAuthUserNotifications']);
 
@@ -102,7 +99,6 @@ Route::group(
         Route::apiResource('notifications', NotificationController::class);
         Route::post('bulk-destroy-notifications', [NotificationController::class, 'bulkDestroy']);
 
-
         // Auth Status Checks
         Route::get('check-login-status', [AuthController::class, 'checkLoginStatus']);
         Route::get('check-app-login-status', [AuthController::class, 'checkAppLoginStatus']);
@@ -113,12 +109,12 @@ Route::group(
         // Logout
         Route::post('logout', [LoginController::class, 'logout']);
 
-        //======================= users =============================
+        // ======================= users =============================
         Route::Resource('users', UserController::class);
         Route::post('bulk-destroy-users', [UserController::class, 'bulkDestroy']);
         Route::post('postToUpdateUserProfile', [UserController::class, 'updateUserProfile']);
 
-        //================= Roles AND Permisions============================
+        // ================= Roles AND Permisions============================
         Route::get('/roles', [RolesAndPermissionsController::class, 'getAssignableRoles']);
         Route::get('roles-with-modified-permissions', [RolesAndPermissionsController::class, 'getRolesWithModifiedPermissions']);
         Route::post('sync-permissions-to-role', [RolesAndPermissionsController::class, 'syncPermissionsToRole']);
@@ -131,8 +127,16 @@ Route::group(
         Route::post('/bulk-destroy-jobs', [JobController::class, 'bulkDestroyJobs']);
         Route::post('/bulk-destroy-failed-jobs', [JobController::class, 'bulkDestroyFailedJobs']);
 
-        //=================== system logs =================================================
+        // =================== system logs =================================================
         Route::get('activity-logs', [ActivityLogsController::class, 'index']);
         Route::post('bulk-destroy-activity-logs', [ActivityLogsController::class, 'bulkDestroy']);
+
+        // =============================== Orders ===============================
+        Route::apiResource('orders', OrderController::class);
+        Route::post('bulk-destroy-orders', [OrderController::class, 'bulkDestroy']);
+
+        // =============================== Transactions ===============================
+        Route::apiResource('transactions', TransactionController::class);
+        Route::post('bulk-destroy-transactions', [TransactionController::class, 'bulkDestroy']);
     }
 );
