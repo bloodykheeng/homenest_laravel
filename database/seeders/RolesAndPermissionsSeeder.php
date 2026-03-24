@@ -20,6 +20,10 @@ class RolesAndPermissionsSeeder extends Seeder
                 'manage user',
 
                 'manage notifications',
+
+                'manage orders',
+
+                'manage transactions',
             ],
 
             'Customer' => [],
@@ -61,7 +65,7 @@ class RolesAndPermissionsSeeder extends Seeder
             // Sync permissions with the role
             $role->syncPermissions($permissionInstances);
 
-            $this->command->info("✅ Synced role: {$roleName} with ".count($permissions).' permissions');
+            $this->command->info("✅ Synced role: {$roleName} with " . count($permissions) . ' permissions');
         }
 
         // 3. Delete permissions that are no longer defined anywhere
