@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Helpers\OrderHelper;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Product;
 use App\Models\Transaction;
 use App\Traits\LoggableTrait;
 use App\Traits\OlyCashTrait;
@@ -12,7 +14,6 @@ use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 
 class OrderController extends Controller
 {
@@ -38,9 +39,9 @@ class OrderController extends Controller
 
         if ($request->filled('search')) {
             $query->where(function ($q) use ($request) {
-                $q->where('order_number', 'like', '%'.$request->query('search').'%')
-                    ->orWhere('guest_name', 'like', '%'.$request->query('search').'%')
-                    ->orWhere('guest_email', 'like', '%'.$request->query('search').'%');
+                $q->where('order_number', 'like', '%' . $request->query('search') . '%')
+                    ->orWhere('guest_name', 'like', '%' . $request->query('search') . '%')
+                    ->orWhere('guest_email', 'like', '%' . $request->query('search') . '%');
             });
         }
 
@@ -83,6 +84,26 @@ class OrderController extends Controller
     }
 
     /**
+     * Display the specified order.
+     */
+    public function show($id)
+    {
+        $order = Order::with($this->orderRelations())->find($id);
+
+        if (! $order) {
+            return response()->json([
+                'message' => 'Order not found',
+                'error' => 'not_found',
+            ], 404);
+        }
+
+        return response()->json([
+            'message' => 'Order retrieved successfully',
+            'data' => $order,
+        ]);
+    }
+
+    /**
      * Store a new order.
      * If payment_option is "Pay Now", initiates an OlyCash payment and returns purchase details.
      */
@@ -104,8 +125,8 @@ class OrderController extends Controller
             'items.*.product_name' => 'required|string|max:255',
             'items.*.product_sku' => 'sometimes|nullable|string|max:100',
             'items.*.quantity' => 'required|integer|min:1',
-            'items.*.unit_price' => 'required|numeric|min:0',
-            'items.*.total_price' => 'required|numeric|min:0',
+            'items.*.unit_price' => 'sometimes|nullable|numeric|min:0',
+            'items.*.total_price' => 'sometimes|nullable|numeric|min:0',
             // Pay Now specific fields
             'payment_method' => 'sometimes|nullable|string|max:100',
             'buyer_telephone' => 'sometimes|nullable|string|max:50',
@@ -116,10 +137,14 @@ class OrderController extends Controller
 
         $user = Auth::user();
 
+        // Eager-load products to resolve unit prices without N+1
+        $productIds = array_column($validated['items'], 'product_id');
+        $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
+
         DB::beginTransaction();
         try {
             $order = Order::create([
-                'order_number' => 'ORD-'.strtoupper(Str::random(10)),
+                'order_number' => OrderHelper::generateOrderNumber(),
                 'user_id' => $user?->id,
                 'guest_name' => $validated['guest_name'] ?? null,
                 'guest_email' => $validated['guest_email'] ?? null,
@@ -137,14 +162,18 @@ class OrderController extends Controller
             ]);
 
             foreach ($validated['items'] as $item) {
+                $product = $products->get($item['product_id']);
+                $unitPrice = $item['unit_price'] ?? $product->price;
+                $totalPrice = $item['total_price'] ?? ($unitPrice * $item['quantity']);
+
                 OrderItem::create([
                     'order_id' => $order->id,
                     'product_id' => $item['product_id'],
                     'product_name' => $item['product_name'],
-                    'product_sku' => $item['product_sku'] ?? null,
+                    'product_sku' => $item['product_sku'] ?? $product->sku ?? null,
                     'quantity' => $item['quantity'],
-                    'unit_price' => $item['unit_price'],
-                    'total_price' => $item['total_price'],
+                    'unit_price' => $unitPrice,
+                    'total_price' => $totalPrice,
                 ]);
             }
 
@@ -159,7 +188,7 @@ class OrderController extends Controller
                 $nameParts = explode(' ', $buyerName, 2);
 
                 $olyCashResponse = $this->initiateOlyCashPayment([
-                    'item_name' => 'Order '.$order->order_number,
+                    'item_name' => 'Order ' . $order->order_number,
                     'quantity' => '1',
                     'total' => (string) $validated['total'],
                     'price' => (string) $validated['total'],
@@ -211,40 +240,13 @@ class OrderController extends Controller
         }
     }
 
-    /**
-     * Display the specified order.
-     */
-    public function show($id)
-    {
-        $order = Order::with($this->orderRelations())->find($id);
 
-        if (! $order) {
-            return response()->json([
-                'message' => 'Order not found',
-                'error' => 'not_found',
-            ], 404);
-        }
-
-        return response()->json([
-            'message' => 'Order retrieved successfully',
-            'data' => $order,
-        ]);
-    }
 
     /**
      * Update the specified order (status / notes / shipping address).
      */
     public function update(Request $request, $id)
     {
-        $order = Order::find($id);
-
-        if (! $order) {
-            return response()->json([
-                'message' => 'Order not found',
-                'error' => 'not_found',
-            ], 404);
-        }
-
         $validated = $request->validate([
             'status' => 'sometimes|string|in:pending,processing,completed,cancelled',
             'shipping_address' => 'sometimes|nullable|string',
@@ -255,6 +257,18 @@ class OrderController extends Controller
 
         DB::beginTransaction();
         try {
+            // Lock the row to prevent concurrent update conflicts
+            $order = Order::where('id', $id)->lockForUpdate()->first();
+
+            if (! $order) {
+                DB::rollBack();
+
+                return response()->json([
+                    'message' => 'Order not found',
+                    'error' => 'not_found',
+                ], 404);
+            }
+
             $order->update($validated);
             DB::commit();
 

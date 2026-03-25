@@ -4,10 +4,10 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Product;
+use App\Models\ProductAdditionalInfo;
 use App\Models\ProductAttachment;
 use App\Models\ProductColor;
 use App\Models\ProductSize;
-use App\Models\ProductAdditionalInfo;
 use App\Traits\HandleAttachmentTrait;
 use App\Traits\LoggableTrait;
 use Exception;
@@ -38,8 +38,9 @@ class ProductController extends Controller
         if ($request->filled('search')) {
             $search = $request->query('search');
             $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', '%' . $search . '%')
-                    ->orWhere('description', 'like', '%' . $search . '%');
+                $q->where('name', 'like', '%'.$search.'%')
+                    ->orWhere('sku', 'like', '%'.$search.'%')
+                    ->orWhere('description', 'like', '%'.$search.'%');
             });
         }
 
@@ -73,6 +74,7 @@ class ProductController extends Controller
 
         if ($request->boolean('paginate')) {
             $perPage = $request->get('rowsPerPage', 10);
+
             return response()->json(['data' => $query->latest()->paginate($perPage)]);
         }
 
@@ -94,7 +96,7 @@ class ProductController extends Controller
             'updatedBy',
         ])->find($id);
 
-        if (!$product) {
+        if (! $product) {
             return response()->json(['message' => 'Product not found'], 404);
         }
 
@@ -120,6 +122,7 @@ class ProductController extends Controller
 
             $validatedData = $request->validate([
                 'name' => 'required|string|max:255',
+                'sku' => 'nullable|string|max:100|unique:products,sku',
                 'description' => 'nullable|string',
                 'price' => 'required|numeric|min:0',
                 'quantity' => 'required|integer|min:0',
@@ -170,7 +173,7 @@ class ProductController extends Controller
                         $fileData = $this->handleAttachmentUpload($uploadedFile, 'product_attachments');
 
                         // Ensure only one featured attachment
-                        $isFeatured = ($attachmentData['featured'] ?? false) && !$hasFeatured;
+                        $isFeatured = ($attachmentData['featured'] ?? false) && ! $hasFeatured;
                         if ($isFeatured) {
                             $hasFeatured = true;
                         }
@@ -230,12 +233,12 @@ class ProductController extends Controller
 
             return response()->json([
                 'message' => 'Product created successfully',
-                'data' => $product->load(['subcategory', 'productAttachments', 'featuredAttachment', 'colors', 'sizes', 'additionalInfo'])
+                'data' => $product->load(['subcategory', 'productAttachments', 'featuredAttachment', 'colors', 'sizes', 'additionalInfo']),
             ], 201);
         } catch (Exception $e) {
             DB::rollBack();
 
-            $this->logActivity('Product Creation Failed', 'Failed to create product: ' . $e->getMessage(), [
+            $this->logActivity('Product Creation Failed', 'Failed to create product: '.$e->getMessage(), [
                 'error' => $e->getMessage(),
                 'line' => $e->getLine(),
                 'user_id' => Auth::id(),
@@ -269,6 +272,7 @@ class ProductController extends Controller
 
             $validatedData = $request->validate([
                 'name' => 'sometimes|string|max:255',
+                'sku' => 'nullable|string|max:100|unique:products,sku,'.$product->id,
                 'description' => 'nullable|string',
                 'price' => 'sometimes|numeric|min:0',
                 'quantity' => 'sometimes|integer|min:0',
@@ -335,7 +339,7 @@ class ProductController extends Controller
                         $existingAttachment = ProductAttachment::find($attachmentData['existing_attachment_id']);
                         if ($existingAttachment) {
                             // Ensure only one featured attachment
-                            $isFeatured = ($attachmentData['featured'] ?? false) && !$hasFeatured;
+                            $isFeatured = ($attachmentData['featured'] ?? false) && ! $hasFeatured;
                             if ($isFeatured) {
                                 $hasFeatured = true;
                                 // Unfeatured all others
@@ -359,7 +363,7 @@ class ProductController extends Controller
                         $fileData = $this->handleAttachmentUpload($uploadedFile, 'product_attachments');
 
                         // Ensure only one featured attachment
-                        $isFeatured = ($attachmentData['featured'] ?? false) && !$hasFeatured;
+                        $isFeatured = ($attachmentData['featured'] ?? false) && ! $hasFeatured;
                         if ($isFeatured) {
                             $hasFeatured = true;
                             // Unfeatured all others
@@ -450,12 +454,12 @@ class ProductController extends Controller
 
             return response()->json([
                 'message' => 'Product updated successfully',
-                'data' => $product->load(['subcategory', 'productAttachments', 'featuredAttachment', 'colors', 'sizes', 'additionalInfo'])
+                'data' => $product->load(['subcategory', 'productAttachments', 'featuredAttachment', 'colors', 'sizes', 'additionalInfo']),
             ]);
         } catch (Exception $e) {
             DB::rollBack();
 
-            $this->logActivity('Product Update Failed', 'Failed to update product: ' . $e->getMessage(), [
+            $this->logActivity('Product Update Failed', 'Failed to update product: '.$e->getMessage(), [
                 'error' => $e->getMessage(),
                 'line' => $e->getLine(),
                 'product_id' => $id,
@@ -489,12 +493,14 @@ class ProductController extends Controller
             ]);
 
             DB::commit();
+
             return response()->json(['message' => 'Product deleted successfully']);
         } catch (Exception $e) {
             DB::rollBack();
+
             return response()->json([
                 'message' => 'Error deleting product',
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
             ], 500);
         }
     }
@@ -503,7 +509,7 @@ class ProductController extends Controller
     {
         $itemsToDelete = $request->input('itemsToDelete');
 
-        if (!is_array($itemsToDelete) || empty($itemsToDelete)) {
+        if (! is_array($itemsToDelete) || empty($itemsToDelete)) {
             return response()->json(['message' => 'Invalid or empty product data'], 400);
         }
 
@@ -543,7 +549,7 @@ class ProductController extends Controller
             }
 
             $detailsString = collect($deletedProductDetails)
-                ->map(fn($product) => "Product ID: {$product['id']}, Name: \"{$product['name']}\"")
+                ->map(fn ($product) => "Product ID: {$product['id']}, Name: \"{$product['name']}\"")
                 ->join('; ');
 
             $this->logActivity('Products Bulk Deleted', 'Multiple products were successfully deleted', [
@@ -558,7 +564,7 @@ class ProductController extends Controller
         } catch (Exception $e) {
             DB::rollBack();
 
-            $this->logActivity('Products Bulk Delete Failed', 'Failed to delete multiple products: ' . $e->getMessage(), [
+            $this->logActivity('Products Bulk Delete Failed', 'Failed to delete multiple products: '.$e->getMessage(), [
                 'product_ids' => $productIds,
                 'error' => $e->getMessage(),
                 'line' => $e->getLine(),
