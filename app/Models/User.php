@@ -12,7 +12,7 @@ use Spatie\Permission\Traits\HasRoles;
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable, HasApiTokens, HasRoles;
+    use HasApiTokens, HasFactory, HasRoles, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -33,6 +33,9 @@ class User extends Authenticatable
         'phone',
         'gender',
         'citizenship',
+        'city',
+        'address',
+        'postal_code',
         'allow_notifications',
         'status',
         'lastlogin',
@@ -91,20 +94,25 @@ class User extends Authenticatable
      */
     public function getPhotoUrlAttribute($value)
     {
-        return $value ? asset('storage/' . $value) : null;
+        return $value ? asset('storage/'.$value) : null;
     }
 
     // ========================================
     // Relationships - Self-referential
     // ========================================
 
-    public function createdBy()
+    public function createdBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function updatedBy()
+    public function updatedBy(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by');
+    }
+
+    public function socialAuthProviders(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(SocialAuthProvider::class, 'user_id');
     }
 }

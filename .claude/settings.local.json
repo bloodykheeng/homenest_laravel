@@ -5,7 +5,8 @@
       "Bash(php artisan make:model:*)",
       "Bash(php artisan make:controller:*)",
       "Bash(vendor/bin/pint:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(php artisan *)"
     ],
     "deny": [],
     "ask": []

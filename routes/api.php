@@ -19,6 +19,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\EmailTestController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\OtpPasswordResetController;
+use App\Http\Controllers\SocialAuthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -60,6 +61,9 @@ Route::group(
         Route::post('password-get-otp', [OtpPasswordResetController::class, 'getOtpForPasswordReset']);
         Route::post('password-validate-otp', [OtpPasswordResetController::class, 'validateOtp']);
         Route::post('password-reset-with-otp', [OtpPasswordResetController::class, 'resetPasswordWithOtp']);
+
+        // ======================= Social OAuth Login ===============================
+        Route::post('social-login', [SocialAuthController::class, 'handleSocialLogin']);
     }
 );
 
